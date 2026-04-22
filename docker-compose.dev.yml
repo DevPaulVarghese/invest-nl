@@ -1,0 +1,41 @@
+# Live-reload development stack. Use from this directory:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
+#
+# - API: bind-mounts ./backend and runs uvicorn with --reload
+# - Frontend: bind-mounts project root, keeps node_modules in a volume, runs `next dev`
+#
+# On Windows Docker Desktop, polling env vars help file watching on bind mounts.
+
+services:
+  invest_nl_api:
+    volumes:
+      - ./backend:/app
+    command:
+      - sh
+      - -c
+      - alembic upgrade head && python scripts/seed_portfolio.py && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  invest_nl_frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      - .:/app
+      - invest_nl_frontend_node_modules:/app/node_modules
+    environment:
+      NEXT_PRIVATE_API_URL: http://invest_nl_api:8000
+      WATCHPACK_POLLING: "1"
+      CHOKIDAR_USEPOLLING: "1"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "node -e \"const http = require('http'); http.get('http://127.0.0.1:2750', r => { process.exit(r.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))\" || exit 1",
+        ]
+      interval: 30s
+      timeout: 10s
+      start_period: 120s
+      retries: 5
+
+volumes:
+  invest_nl_frontend_node_modules:

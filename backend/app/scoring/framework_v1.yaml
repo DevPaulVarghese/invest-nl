@@ -1,0 +1,99 @@
+version: "2.0.0"
+description: >
+  Comprehensive due-diligence framework for AI-for-good investment proposals.
+  56 factors across 12 pillars covering ESG, AI governance, financial, market, technology, legal,
+  and risk dimensions.
+
+pillars:
+  - id: gatekeeper
+    title: "1. Gatekeeper & Eligibility"
+    description: >
+      Hard exclusion criteria (sanctions, prohibited sectors) that must be cleared before
+      quantitative scoring begins. A triggered gate zeroes the ESG score.
+    factor_count: 1
+
+  - id: governance
+    title: "2. Corporate Governance"
+    description: >
+      Board composition, diversity, responsible business conduct policies, whistleblower
+      mechanisms, internal controls, and reporting transparency.
+    factor_count: 6
+
+  - id: ai_governance
+    title: "3. AI & Data Governance"
+    description: >
+      AI oversight structures, ethical frameworks, algorithmic bias monitoring, GDPR / AI Act
+      compliance, model robustness testing, and AI explainability.
+    factor_count: 6
+
+  - id: environmental
+    title: "4. Environmental Footprint"
+    description: >
+      Energy efficiency, water intensity, circularity, critical raw materials, GHG emissions
+      (Scope 1-3), biodiversity impact, renewable energy usage, and GHG intensity per revenue.
+    factor_count: 8
+
+  - id: social_safety
+    title: "5. Social, Safety & Human Rights"
+    description: >
+      Dual-use risk, weaponization potential, human rights in the value chain, controversy
+      exposure, and safety testing.
+    factor_count: 5
+
+  - id: sdg
+    title: "6. SDG & Societal Impact"
+    description: >
+      UN SDG alignment, societal benefit magnitude, stakeholder engagement, digital
+      inclusion, impact scale potential, and net job creation/displacement.
+    factor_count: 6
+
+  - id: financial
+    title: "7. Financial Analysis"
+    description: >
+      Runway adequacy, financial reporting quality, revenue model maturity, and valuation
+      reasonableness.
+    factor_count: 4
+
+  - id: market
+    title: "8. Market & Competition"
+    description: >
+      TAM sizing, competitive positioning, customer concentration risk, and regulatory
+      environment.
+    factor_count: 4
+
+  - id: technology
+    title: "9. Technology & IP"
+    description: >
+      Technology defensibility, scalability, data infrastructure quality, cybersecurity
+      posture, IP portfolio strength, and hardware lifecycle management.
+    factor_count: 6
+
+  - id: team
+    title: "10. Team & Execution"
+    description: >
+      Execution track record, theme fit, key-person dependency, and advisory network quality.
+    factor_count: 4
+
+  - id: legal
+    title: "11. Legal & Compliance"
+    description: >
+      Legal structure clarity, regulatory compliance status, and litigation / liability exposure.
+    factor_count: 3
+
+  - id: risk_exit
+    title: "12. Risk Assessment & Exit"
+    description: >
+      Concentration risk, operational risk maturity, and exit feasibility within the fund lifecycle.
+    factor_count: 3
+
+scoring_notes:
+  esg_core: >
+    Starts at 50. Additive terms for positive governance, environmental, social, and impact
+    factors; subtractive terms for negative risks. Clamped to 0-100. Exclusion flag forces 0.
+  investment: >
+    Average of 27 normalised 1-5 sliders (23 normal + 4 inverse where higher = worse) mapped
+    to 50-100 scale. Inverse factors use (5-value)/4 normalisation.
+  ai_responsibility: >
+    Weighted composite of 10 AI-relevant factors (including explainability) mapped to 0-100.
+  quadrant: >
+    AI responsibility (X) vs Investment score (Y). Win-win, Impact-first, Caution, or Decline.

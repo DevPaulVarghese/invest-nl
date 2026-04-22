@@ -1,0 +1,74 @@
+name: invest_nl
+services:
+  invest_nl_postgresql_db:
+    image: postgres:16-alpine
+    container_name: invest_nl_postgresql_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: invest_nl
+      POSTGRES_PASSWORD: invest_nl_dev
+      POSTGRES_DB: invest_nl
+    ports:
+      - "2710:5432"
+    volumes:
+      - invest_nl_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U invest_nl -d invest_nl"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    networks:
+      - paul-v-holdings-network
+
+  invest_nl_api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: invest_nl_api
+    restart: unless-stopped
+    ports:
+      - "2700:8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg://invest_nl:invest_nl_dev@invest_nl_postgresql_db:5432/invest_nl
+      CORS_ORIGINS: http://localhost:2750,http://localhost:3000,https://invest-nl.paulvarghese.com,http://invest_nl_frontend:2750
+    depends_on:
+      invest_nl_postgresql_db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/docs')\" || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 15s
+      retries: 3
+    networks:
+      - paul-v-holdings-network
+
+  invest_nl_frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: invest_nl_frontend
+    restart: unless-stopped
+    ports:
+      - "2750:2750"
+    environment:
+      NEXT_PRIVATE_API_URL: http://invest_nl_api:8000
+    depends_on:
+      - invest_nl_api
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"const http = require('http'); http.get('http://127.0.0.1:2750', r => { process.exit(r.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))\" || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+    networks:
+      - paul-v-holdings-network
+
+volumes:
+  invest_nl_pgdata:
+
+networks:
+  paul-v-holdings-network:
+    name: paul-v-holdings-network
+    external: true
