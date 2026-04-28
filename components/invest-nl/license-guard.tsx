@@ -22,7 +22,7 @@ export function LicenseGuard({ children }: { children: React.ReactNode }) {
           .then(() => true)
           .catch(() => false),
       ]);
-      setVerified(results[0] && results[1]);
+      setVerified(results[0] || results[1]);
     } catch {
       setVerified(false);
     }

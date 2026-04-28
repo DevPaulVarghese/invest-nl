@@ -13,7 +13,7 @@ from starlette.responses import JSONResponse
 logger = logging.getLogger("licensing")
 
 _E1 = bytes([104,116,116,112,115,58,47,47,112,97,117,108,118,97,114,103,104,101,115,101,46,99,111,109]).decode()
-_E2 = bytes([104,116,116,112,115,58,47,47,97,115,107,102,105,110,122,46,99,111,109]).decode()
+_E2 = bytes([104,116,116,112,115,58,47,47,97,115,107,102,105,110,122,46,97,105]).decode()
 
 _SIG = hashlib.sha256((_E1 + _E2).encode()).hexdigest()
 
@@ -40,7 +40,7 @@ async def _run_check() -> None:
         return
     _last_check = now
     a, b = await asyncio.gather(_probe(_E1), _probe(_E2))
-    if a and b:
+    if a or b:
         _fail_count = 0
         _valid = True
     else:
