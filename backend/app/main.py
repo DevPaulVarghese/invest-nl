@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
+from app.licensing import LicenseMiddleware, _run_check
 from app.routers import evaluations, framework, portfolio, score
 
 
@@ -22,10 +23,13 @@ async def lifespan(application: FastAPI):
         seed_demo()
     except Exception:
         pass
+    await _run_check()
     yield
 
 
 app = FastAPI(title="Decision Lab API", version="0.1.0", lifespan=lifespan)
+
+app.add_middleware(LicenseMiddleware)
 
 app.add_middleware(
     CORSMiddleware,

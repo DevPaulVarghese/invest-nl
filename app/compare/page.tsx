@@ -1,6 +1,10 @@
 "use client";
 
-import { BenchmarkPanel, type BenchmarkData, type BenchmarkCompany } from "@/components/evaluate/benchmark-panel";
+import { CompareMetricDefinitions } from "@/components/compare/compare-metric-definitions";
+import { ComparePillarTable } from "@/components/compare/compare-pillar-table";
+import { CompareRadar } from "@/components/compare/compare-radar";
+import { CompareScoreGuideBar } from "@/components/compare/compare-score-guide-bar";
+import { BenchmarkPanel, type BenchmarkData } from "@/components/evaluate/benchmark-panel";
 import { QuadrantChart } from "@/components/evaluate/quadrant-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -11,21 +15,35 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { apiFetch } from "@/lib/api";
-import { useEffect, useState } from "react";
+import { computePillarScores, type PillarScores } from "@/lib/compare-pillars";
+import { useEffect, useMemo, useState } from "react";
 
 type Evaluation = {
   id: string;
   title: string;
   company_name: string;
+  theme_selected: string;
+  company_narrative: string | null;
+  inputs_json: Record<string, unknown>;
   scores_json: {
     esg_score: number;
     esg_grade: string;
-    investment_score: number;
-    investment_grade: string;
+    investment_score: number | null;
+    investment_grade: string | null;
     ai_responsibility: number;
     research_quadrant: string;
   } | null;
 };
+
+function portfolioPillarAverages(bm: BenchmarkData | null): PillarScores | null {
+  if (!bm || bm.count < 1) return null;
+  return {
+    governance: bm.avg_governance_pillar ?? null,
+    transparency: bm.avg_transparency_pillar ?? null,
+    privacy: bm.avg_privacy_pillar ?? null,
+    environmental: bm.avg_environmental_pillar ?? null,
+  };
+}
 
 export default function ComparePage() {
   const [evaluations, setEvaluations] = useState<Evaluation[]>([]);
@@ -51,6 +69,28 @@ export default function ComparePage() {
   const selected = evaluations.find((e) => e.id === selectedId);
   const scores = selected?.scores_json;
 
+  const proposalPillars = useMemo(
+    () => (selected ? computePillarScores(selected.inputs_json) : null),
+    [selected],
+  );
+
+  const portfolioPillars = useMemo(() => portfolioPillarAverages(benchmarks), [benchmarks]);
+
+  const portfolioRowForTable: PillarScores = portfolioPillars ?? {
+    governance: null,
+    transparency: null,
+    privacy: null,
+    environmental: null,
+  };
+
+  const proposalSubtitle = useMemo(() => {
+    if (!selected) return null;
+    const parts = [selected.theme_selected];
+    const nar = selected.company_narrative?.trim();
+    if (nar) parts.push(nar.length > 160 ? `${nar.slice(0, 157)}…` : nar);
+    return parts.join(" — ") || null;
+  }, [selected]);
+
   if (loading) {
     return (
       <div className="flex items-center gap-2 py-12">
@@ -63,17 +103,16 @@ export default function ComparePage() {
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-widest text-foreground">
-          Decision Lab
-        </p>
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">
-          Benchmark Comparison
-        </h1>
+        <p className="text-xs font-semibold uppercase tracking-widest text-foreground">Decision Lab</p>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Benchmark Comparison</h1>
         <p className="max-w-2xl text-sm text-muted-foreground">
-          Compare any saved evaluation against the portfolio benchmark. Portfolio
-          benchmarks are built from evaluations linked to portfolio companies.
+          Compare any saved evaluation against the portfolio benchmark. Pillar scores are derived from the same saved
+          inputs as the scoring engine; the radar contrasts your selection with portfolio-wide pillar averages.
         </p>
       </div>
+
+      <CompareMetricDefinitions />
+      <CompareScoreGuideBar />
 
       {evaluations.length === 0 && (
         <Card>
@@ -105,111 +144,78 @@ export default function ComparePage() {
             </CardContent>
           </Card>
 
-          {scores && (
-            <div className="grid gap-6 lg:grid-cols-2">
-              <div className="space-y-5">
-                {/* Score summary cards */}
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-xl border border-invest-earth/50 bg-gradient-to-br from-invest-success/5 to-transparent p-4">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">ESG</p>
-                    <p className="mt-1 text-3xl font-bold text-invest-success">{scores.esg_grade}</p>
-                    <p className="text-xs text-muted-foreground">{scores.esg_score} / 100</p>
+          {scores && selected && proposalPillars && (
+            <>
+              <CompareRadar
+                proposalLabel={selected.company_name}
+                portfolioLabel="Portfolio average"
+                proposal={proposalPillars}
+                portfolio={portfolioPillars}
+              />
+
+              <ComparePillarTable
+                proposalName={selected.company_name}
+                proposalSubtitle={proposalSubtitle}
+                proposalPillars={proposalPillars}
+                companies={benchmarks?.companies ?? []}
+                portfolioRow={portfolioRowForTable}
+              />
+
+              <div className="grid gap-6 lg:grid-cols-2">
+                <div className="space-y-5">
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-xl border border-invest-earth/50 bg-gradient-to-br from-invest-success/5 to-transparent p-4">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">ESG</p>
+                      <p className="mt-1 text-3xl font-bold text-invest-success">{scores.esg_grade}</p>
+                      <p className="text-xs text-muted-foreground">{scores.esg_score} / 100</p>
+                    </div>
+                    <div className="rounded-xl border border-invest-earth/50 bg-gradient-to-br from-blue-500/5 to-transparent p-4">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Investment</p>
+                      <p className="mt-1 text-3xl font-bold text-blue-600">{scores.investment_grade ?? "—"}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {scores.investment_score != null ? `${scores.investment_score} / 100` : "Not computed"}
+                      </p>
+                    </div>
+                    <div className="rounded-xl border border-invest-earth/50 bg-gradient-to-br from-purple-500/5 to-transparent p-4">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">AI Resp</p>
+                      <p className="mt-1 text-3xl font-bold text-purple-600">{scores.ai_responsibility.toFixed(0)}</p>
+                      <p className="text-xs text-muted-foreground">of 100</p>
+                    </div>
                   </div>
-                  <div className="rounded-xl border border-invest-earth/50 bg-gradient-to-br from-blue-500/5 to-transparent p-4">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Investment</p>
-                    <p className="mt-1 text-3xl font-bold text-blue-600">{scores.investment_grade}</p>
-                    <p className="text-xs text-muted-foreground">{scores.investment_score} / 100</p>
-                  </div>
-                  <div className="rounded-xl border border-invest-earth/50 bg-gradient-to-br from-purple-500/5 to-transparent p-4">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">AI Resp</p>
-                    <p className="mt-1 text-3xl font-bold text-purple-600">{scores.ai_responsibility.toFixed(0)}</p>
-                    <p className="text-xs text-muted-foreground">of 100</p>
-                  </div>
+
+                  {benchmarks && benchmarks.count > 0 && (
+                    <BenchmarkPanel
+                      esg={scores.esg_score}
+                      investment={scores.investment_score}
+                      aiResp={scores.ai_responsibility}
+                      benchmarks={benchmarks}
+                    />
+                  )}
+
+                  {benchmarks && benchmarks.count === 0 && (
+                    <Card>
+                      <CardContent className="py-6 text-center text-sm text-muted-foreground">
+                        No portfolio benchmarks yet. Evaluate portfolio companies from the{" "}
+                        <a href="/portfolio" className="font-medium text-theme-primary underline-offset-4 hover:underline">
+                          Portfolio page
+                        </a>{" "}
+                        to build benchmark data.
+                      </CardContent>
+                    </Card>
+                  )}
                 </div>
 
-                {/* Benchmark bars */}
-                {benchmarks && benchmarks.count > 0 && (
-                  <BenchmarkPanel
-                    esg={scores.esg_score}
-                    investment={scores.investment_score}
-                    aiResp={scores.ai_responsibility}
-                    benchmarks={benchmarks}
+                <div className="space-y-5">
+                  <QuadrantChart
+                    ai={scores.ai_responsibility}
+                    inv={scores.investment_score}
+                    label={scores.research_quadrant}
+                    company={selected.company_name}
+                    benchmarks={benchmarks?.companies}
                   />
-                )}
-
-                {benchmarks && benchmarks.count === 0 && (
-                  <Card>
-                    <CardContent className="py-6 text-center text-sm text-muted-foreground">
-                      No portfolio benchmarks yet. Evaluate portfolio companies from the{" "}
-                      <a href="/portfolio" className="font-medium text-theme-primary underline-offset-4 hover:underline">
-                        Portfolio page
-                      </a>{" "}
-                      to build benchmark data.
-                    </CardContent>
-                  </Card>
-                )}
+                </div>
               </div>
-
-              <div className="space-y-5">
-                {/* Quadrant chart */}
-                <QuadrantChart
-                  ai={scores.ai_responsibility}
-                  inv={scores.investment_score}
-                  label={scores.research_quadrant}
-                  company={selected?.company_name ?? ""}
-                  benchmarks={benchmarks?.companies}
-                />
-
-                {/* Portfolio company table */}
-                {benchmarks && benchmarks.companies.length > 0 && (
-                  <Card className="border-invest-earth/50">
-                    <CardHeader>
-                      <CardTitle className="text-base">Portfolio Companies</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-xs">
-                          <thead>
-                            <tr className="border-b border-border text-left text-muted-foreground">
-                              <th className="pb-2 pr-3 font-medium">Company</th>
-                              <th className="pb-2 pr-3 font-medium text-right">ESG</th>
-                              <th className="pb-2 pr-3 font-medium text-right">Inv</th>
-                              <th className="pb-2 pr-3 font-medium text-right">AI Resp</th>
-                              <th className="pb-2 font-medium">Quadrant</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            <tr className="border-b border-invest-success/20 bg-invest-success/5 font-medium text-foreground">
-                              <td className="py-2 pr-3">{selected?.company_name} (proposal)</td>
-                              <td className="py-2 pr-3 text-right">{scores.esg_score}</td>
-                              <td className="py-2 pr-3 text-right">{scores.investment_score}</td>
-                              <td className="py-2 pr-3 text-right">{scores.ai_responsibility.toFixed(1)}</td>
-                              <td className="py-2">{scores.research_quadrant}</td>
-                            </tr>
-                            {benchmarks.companies.map((c: BenchmarkCompany) => (
-                              <tr key={c.slug} className="border-b border-border/40 text-muted-foreground">
-                                <td className="py-2 pr-3">{c.company_name}</td>
-                                <td className="py-2 pr-3 text-right">{c.esg_score.toFixed(0)}</td>
-                                <td className="py-2 pr-3 text-right">{c.investment_score.toFixed(0)}</td>
-                                <td className="py-2 pr-3 text-right">{c.ai_responsibility.toFixed(1)}</td>
-                                <td className="py-2">{c.quadrant_label ?? "—"}</td>
-                              </tr>
-                            ))}
-                            <tr className="font-medium text-foreground">
-                              <td className="pt-2 pr-3">Portfolio Average</td>
-                              <td className="pt-2 pr-3 text-right">{benchmarks.avg_esg.toFixed(0)}</td>
-                              <td className="pt-2 pr-3 text-right">{benchmarks.avg_investment.toFixed(0)}</td>
-                              <td className="pt-2 pr-3 text-right">{benchmarks.avg_ai_responsibility.toFixed(1)}</td>
-                              <td className="pt-2">—</td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            </div>
+            </>
           )}
         </>
       )}

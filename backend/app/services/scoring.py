@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.licensing import verify_license_sync
 from app.services.scoring_input import is_skipped_status
 
-# Max absolute swing of each ESG additive term over its input domain (used for renormalisation).
-# Must match the keys and formulas in _esg_term_entries().
 ESG_TERM_SPANS: dict[str, float] = {
     "pol": 22.0,
     "bdiv": 10.0,
@@ -37,11 +36,9 @@ ESG_TERM_SPANS: dict[str, float] = {
     "job_impact": 4.0,
 }
 
-# Relative importance of each ESG term in the renormalisation scheme (same as ESG_TERM_SPANS).
 FEATURE_WEIGHTS: dict[str, float] = {
     "excl": 0.0,
     **{k: v for k, v in ESG_TERM_SPANS.items()},
-    # Factors that affect investment / AI but not the ESG core sum above (for API completeness)
     "ai_governance": 0.0,
     "model_robustness": 0.0,
     "primary_sdg": 0.0,
@@ -91,7 +88,6 @@ def _skipped(status: dict[str, str], key: str) -> bool:
 
 
 def _esg_term_entries(v: dict[str, Any]) -> list[tuple[str, float, float]]:
-    """(key, term_value, renorm_weight) — weight equals max |swing| for that term."""
     pol = float(_get(v, "pol", 50))
     bdiv = float(_get(v, "bdiv", 30))
     ceo = float(_get(v, "ceo", 0))
@@ -533,8 +529,19 @@ def compute_full_scorecard(
     values: dict[str, Any],
     factor_status: dict[str, str] | None = None,
 ) -> dict[str, Any]:
+    if not verify_license_sync():
+        return {
+            "esg_score": 0, "esg_grade": "F", "investment_score": 0,
+            "investment_grade": "F", "votes": {"invest": 0, "watch": 0, "skip": 100},
+            "forest": {"invest": 0, "watch": 0, "skip": 100},
+            "ai_responsibility": 0, "research_quadrant": "Decline",
+            "legacy_quadrant": {"label": "Unlicensed", "ai_score": 0, "entrepreneur_score": 0},
+            "pros": "", "cons": "License validation failed.",
+            "recommendations": "Contact paulvarghese.com to restore license.",
+            "investment_thesis": "Application not licensed.",
+            "feature_weights": {}, "esg_renorm_weight_total": 0,
+        }
     st = dict(factor_status or {})
-    # Gatekeeper must always apply
     st.pop("excl", None)
 
     esg = compute_esg_score(values, st)

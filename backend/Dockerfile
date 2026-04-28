@@ -15,5 +15,4 @@ ENV PYTHONPATH=/app
 
 EXPOSE 8000
 
-# Migrations + idempotent seed, then API
 CMD ["sh", "-c", "alembic upgrade head && python scripts/seed_portfolio.py && uvicorn app.main:app --host 0.0.0.0 --port 8000"]

@@ -3,7 +3,7 @@
 type BenchmarkDot = {
   company_name: string;
   ai_responsibility: number;
-  investment_score: number;
+  investment_score: number | null;
 };
 
 export function QuadrantChart({
@@ -120,9 +120,10 @@ export function QuadrantChart({
           <text x={PAD.left + plotW + 4} y={H / 2} fontSize="7" fill="currentColor" className="text-muted-foreground" textAnchor="start" dominantBaseline="middle">High AI</text>
 
           {/* Benchmark dots */}
-          {benchmarks?.map((b) => {
+          {benchmarks?.filter((b) => b.investment_score != null).map((b) => {
+            const inv = b.investment_score as number;
             const bx = toX(b.ai_responsibility);
-            const by = toY(b.investment_score);
+            const by = toY(inv);
             const shortName = b.company_name.length > 14 ? `${b.company_name.slice(0, 13)}…` : b.company_name;
             return (
               <g key={b.company_name}>

@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { SiteFooter } from "@/components/invest-nl/site-footer";
 import { SiteHeader } from "@/components/invest-nl/site-header";
+import { LicenseGuard } from "@/components/invest-nl/license-guard";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -40,9 +41,11 @@ export default function RootLayout({
         />
       </head>
       <body className="flex min-h-full flex-col">
-        <SiteHeader />
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">{children}</main>
-        <SiteFooter />
+        <LicenseGuard>
+          <SiteHeader />
+          <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">{children}</main>
+          <SiteFooter />
+        </LicenseGuard>
       </body>
     </html>
   );

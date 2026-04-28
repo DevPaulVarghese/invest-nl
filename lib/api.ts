@@ -1,13 +1,17 @@
+import { isLicenseValid, validateLicenseSync } from "@/lib/license";
+
 export function apiBase(): string {
-  // Server-side: call backend container directly
   if (typeof window === "undefined" && process.env.NEXT_PRIVATE_API_URL) {
     return process.env.NEXT_PRIVATE_API_URL;
   }
-  // Client-side: use same-origin (Next.js rewrites proxy to backend)
   return "";
 }
 
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  if (typeof window !== "undefined" && !isLicenseValid()) {
+    validateLicenseSync();
+    throw new Error("License validation failed");
+  }
   const res = await fetch(`${apiBase()}${path}`, {
     ...init,
     headers: {

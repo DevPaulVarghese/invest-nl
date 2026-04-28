@@ -6,10 +6,15 @@ export type BenchmarkCompany = {
   company_name: string;
   slug: string;
   logo_url: string | null;
+  theme_selected?: string | null;
   esg_score: number;
-  investment_score: number;
+  investment_score: number | null;
   ai_responsibility: number;
   quadrant_label: string | null;
+  governance_pillar?: number | null;
+  transparency_pillar?: number | null;
+  privacy_pillar?: number | null;
+  environmental_pillar?: number | null;
 };
 
 export type BenchmarkData = {
@@ -18,6 +23,10 @@ export type BenchmarkData = {
   avg_investment: number;
   avg_ai_responsibility: number;
   count: number;
+  avg_governance_pillar?: number | null;
+  avg_transparency_pillar?: number | null;
+  avg_privacy_pillar?: number | null;
+  avg_environmental_pillar?: number | null;
 };
 
 type Props = {
@@ -89,14 +98,16 @@ function ScoreBar({
 
 export function BenchmarkPanel({ esg, investment, aiResp, benchmarks }: Props) {
   const esgScores = benchmarks.companies.map((c) => c.esg_score);
-  const invScores = benchmarks.companies.map((c) => c.investment_score);
+  const invScores = benchmarks.companies
+    .map((c) => c.investment_score)
+    .filter((x): x is number => x != null);
   const aiScores = benchmarks.companies.map((c) => c.ai_responsibility);
 
   const minMax = (arr: number[]) =>
     arr.length ? { min: Math.min(...arr), max: Math.max(...arr) } : { min: 0, max: 0 };
 
   const esgRange = minMax(esgScores);
-  const invRange = minMax(invScores);
+  const invRange = invScores.length ? minMax(invScores) : { min: 0, max: 100 };
   const aiRange = minMax(aiScores);
 
   return (

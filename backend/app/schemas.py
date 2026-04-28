@@ -144,10 +144,15 @@ class BenchmarkEntry(BaseModel):
     company_name: str
     slug: str
     logo_url: str | None
+    theme_selected: str | None = None
     esg_score: float
-    investment_score: float
+    investment_score: float | None
     ai_responsibility: float
     quadrant_label: str | None
+    governance_pillar: float | None = None
+    transparency_pillar: float | None = None
+    privacy_pillar: float | None = None
+    environmental_pillar: float | None = None
 
 
 class BenchmarkResponse(BaseModel):
@@ -156,3 +161,7 @@ class BenchmarkResponse(BaseModel):
     avg_investment: float
     avg_ai_responsibility: float
     count: int
+    avg_governance_pillar: float | None = None
+    avg_transparency_pillar: float | None = None
+    avg_privacy_pillar: float | None = None
+    avg_environmental_pillar: float | None = None

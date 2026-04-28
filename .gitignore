@@ -35,7 +35,10 @@ yarn-error.log*
 .env.local
 .env.*.local
 backend/.env
-!.env.example
+.env.example
+docker-compose.yml
+docker-compose.dev.yml
+backend/app/config.py
 
 # vercel
 .vercel
